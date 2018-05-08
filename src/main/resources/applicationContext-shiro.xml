@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/util
+		http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- 安全管理器 -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="realm">
+			<bean class="com.shiro.UserRealm"/>
+		</property>		
+	</bean>
+
+	<!-- Shiro Filter -->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/login" />
+		<property name="unauthorizedUrl" value="/login" />
+		<property name="filters">
+            <util:map>
+            	<!-- Shiro的单点登录-->
+                <entry key="kickout">
+                	<bean class="com.shiro.KickoutFilter" />
+                </entry>
+            </util:map>
+        </property>
+		<property name="filterChainDefinitions">
+			<value>
+				/login/** = anon
+				/common/taglibs.jspf = anon
+				/static/** = anon
+				/** = kickout,authc
+			</value>
+		</property>
+	</bean>
+	
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+	
+</beans>

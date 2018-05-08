@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+    http://www.springframework.org/schema/beans/spring-beans.xsd 
+    http://www.springframework.org/schema/tx 
+    http://www.springframework.org/schema/tx/spring-tx.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/cache
+    http://www.springframework.org/schema/cache/spring-cache.xsd
+    http://www.springframework.org/schema/aop 
+    http://www.springframework.org/schema/aop/spring-aop.xsd
+    http://www.springframework.org/schema/data/jpa  
+    http://www.springframework.org/schema/data/jpa/spring-jpa.xsd"
+	default-autowire="byName">
+
+	<context:annotation-config />
+	<context:component-scan base-package="com.service,core" />
+
+	<!-- 配置文件获取 -->
+	<bean id="propertyConfig"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location">
+			<value>classpath:application.properties</value>
+		</property>
+		<property name="fileEncoding">
+			<value>UTF-8</value>
+		</property>
+	</bean>
+
+	<!-- 数据源配置 -->
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<!-- 设置连接池初始值 -->
+		<property name="initialSize" value="1" />
+		<!-- 设置连接池最大值 -->
+		<property name="maxActive" value="100" />
+		<!-- 设置连接池最小空闲值 -->
+		<property name="minIdle" value="10" />
+		<!-- 获取连接最大等待时间 -->
+		<property name="maxWait" value="60000" />
+		<!-- 配置间隔10分钟，检测空闲了5分钟的连接是否需要关闭，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="600000" />
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+
+		<property name="validationQuery" value="SELECT 1 FROM DUAL " />
+		<property name="testOnBorrow" value="false" />
+		<property name="testOnReturn" value="false" />
+		<property name="testWhileIdle" value="true" />
+
+		<property name="filters" value="stat" />
+	</bean>
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<!-- 适配器 -->
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"></bean>
+		</property>
+		<property name="packagesToScan" value="com.entity"></property>
+		<property name="jpaProperties">
+			<props>
+				<!-- 生成的数据表的列的映射策略 -->
+				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQL5InnoDBDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.use_sql_comments">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 使用JDK代理方式配置AOP，暴露代理到Threadload，解决内部调用存在事务再另起事务失效问题 -->
+	<aop:aspectj-autoproxy expose-proxy="true"
+		proxy-target-class="false" />
+	<!-- 使用注解方式定义事务 -->
+	<tx:annotation-driven transaction-manager="transactionManager"
+		proxy-target-class="false" />
+	<!-- 配置事务管理器 -->
+	<bean id="transactionManager"
+		class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory"></property>	
+	</bean>
+	
+	 <!-- Spring Data Jpa配置 -->
+    <jpa:repositories base-package="com.dao" repository-impl-postfix="Impl"
+        entity-manager-factory-ref="entityManagerFactory" transaction-manager-ref="transactionManager"/>
+	
+	<!-- 启用缓存注解功能 -->
+	<cache:annotation-driven cache-manager="redisCacheManager" />
+
+	<bean id="redisUtil" class="core.util.RedisUtil" />
+
+</beans>
